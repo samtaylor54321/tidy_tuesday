@@ -1,12 +1,19 @@
 ---
-title: "Meteorites"
+title: "Meteorite Impacts"
 author: "Sam Taylor"
 date: "11/06/2019"
 output: html_document
 ---
 
+This week's dataset is a dataset all about meteorites, where they fell and when they fell! Data comes from the Meteoritical Society by way of NASA. H/t to #TidyTuesday community member Malin Axelsson for sharing this data as an issue on GitHub!
+
+https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-06-11 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE}
 
 # load packages
 library(tidyverse)
@@ -27,11 +34,12 @@ meteorites_processed <- meteorites %>%
 
 ```
 
-Meteorites having become more common over time - improvements in recording?
+Recording of meteorite impacts hav become more common over time
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 
 # removed meteorites period to 1950 as generally aren't really recorded. In addition, anything post 2019 (current year) is also removed.
+
 meteorites_processed %>% 
   filter(year >1950 & year < 2019) %>% 
   ggplot(aes(x=year)) + geom_histogram(binwidth = 1) +
@@ -41,7 +49,7 @@ meteorites_processed %>%
 
 Mass of meteorites are log normally distributed. 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 
 meteorites_processed %>% 
   ggplot(aes(log(mass))) + geom_histogram() +
@@ -52,20 +60,26 @@ meteorites_processed %>%
 
 Meteorites have gradually getting large since the 1970s although not as large prior to this point in time. NB - the sample size of falls per decade is significantly smaller for 1950s and 1960s giving much more uncertainty around the estimates.
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 meteorites_processed %>% 
   filter(year >1950 & year < 2019) %>% 
   ggplot(aes(x=decade, y=log10(mass), group=decade)) + geom_boxplot(notch=T) +
   labs(x="Decade",y="Mass of Meteorites (Log2 Scale)",
        title="Meteorites having been getting heavier over time since the 1970s") 
-
-# how do I get all over the breakpoints into this?
 ```
 
-Plot which shows changing volumes of meteorite impacts and their associated weight since 1950s. Primary changes appears to be actually recording strikes in Africa in circa 1990 onwards.
+When regressed against decade, the size of meteorite appears to reduce by 2808.8g per decade.
 
-```{r}
-anim <- meteorites_processed %>% 
+```{r, warning=FALSE, message=FALSE}
+lm(mass~decade, data=meteorites_processed) %>% 
+  summary()
+```
+
+The plot below shows changing volumes of meteorite impacts and their associated weight since 1950s. Primary changes appears to be actually recording strikes in Africa in circa 1990 onwards.
+
+```{r, warning=FALSE, message=FALSE}
+
+meteorites_processed %>% 
   filter(year >1950 & year < 2019) %>% 
   ggplot(aes(long, lat)) +    
   geom_point(aes(color=log(mass)),alpha=1/8) +
@@ -86,8 +100,6 @@ anim <- meteorites_processed %>%
   labs(title="Meteorite Impacts since the 1950s",
        subtitle = "",
        caption = 'Decade: {current_frame}')
-
-magick::image_write(anim, path="meteorite_anim.gif")
 
 ```
 
