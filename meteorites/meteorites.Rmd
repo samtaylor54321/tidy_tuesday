@@ -86,8 +86,8 @@ test <- meteorites_processed %>%
   borders(database = "world") + theme_void() + 
   scale_color_continuous(low='light blue',
                          high='navy blue',
-                         name ='') +
-  scale_size_continuous(name ='Meteorite \n Mass (log)') +
+                         name ='Meteorite \n Mass (Log)') +
+  scale_size_continuous(name ='') +
   theme(legend.position = c(0.075, 0.3),
         plot.title = element_text(size=25, face='bold',
                                   hjust = 0.5, vjust=0),
