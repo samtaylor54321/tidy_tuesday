@@ -79,15 +79,16 @@ The plot below shows changing volumes of meteorite impacts and their associated 
 
 ```{r, warning=FALSE, message=FALSE}
 
-meteorites_processed %>% 
+test <- meteorites_processed %>% 
   filter(year >1950 & year < 2019) %>% 
-  ggplot(aes(long, lat)) +    
-  geom_point(aes(color=log(mass)),alpha=1/8) +
+  ggplot(aes(long, lat)) + 
+  geom_point(aes(color=log(mass), size=log(mass)),alpha=1/8) +
   borders(database = "world") + theme_void() + 
   scale_color_continuous(low='light blue',
                          high='navy blue',
-                         name ='Meteorite \n Mass') +
-  theme(legend.position = c(0.1, 0.4),
+                         name ='') +
+  scale_size_continuous(name ='Meteorite \n Mass (log)') +
+  theme(legend.position = c(0.075, 0.3),
         plot.title = element_text(size=25, face='bold',
                                   hjust = 0.5, vjust=0),
         plot.caption = element_text(size=14)) +
@@ -100,6 +101,9 @@ meteorites_processed %>%
   labs(title="Meteorite Impacts since the 1950s",
        subtitle = "",
        caption = 'Decade: {current_frame}')
+
+anim_save("amin.gif", animation = test)
+
 
 ```
 
