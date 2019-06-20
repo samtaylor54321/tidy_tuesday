@@ -57,7 +57,7 @@ bird_counts_processed %>%
          title = "The number of birds spotted since the 1960s have increased \n whilst hours spent watching have remained consistant") 
 ```
 
-## What are the most common species of birds?
+## What are the most common species of birds and how long are they watched for?
 
 ```{r species plot, echo=FALSE}
 
@@ -93,51 +93,48 @@ bird_counts_processed %>%
        y="Total number of birds counted",
        title = "Most common species of birds spotted")
 
-ggsave("species_plot.pdf", plot=last_plot())
+ggsave("species_count_plot.pdf", plot=last_plot())
   
 ```
  
-## Hours spent watching birds and their counts.
-
-What is the distribution of the number of hours spent watching birds and the number of birds counted during this period. 
-
-The plot below shows the amounts of birds counted in the dataset - a large number of cases resulted
-in no birds being counted.
-
-```{r, echo=FALSE}
-bird_counts_processed %>% 
-  ggplot(aes(x=log10(how_many_counted))) + geom_histogram() +
-  labs(x="Number of birds count (log10 Scale)",
-       y="",
-       title="Distribution of birds counted")
-```
-
-The plot below shows the amounts of time spent watching birds in the dataset.
-
-```{r total_count hist, echo=FALSE}
-bird_counts_processed %>% 
-  ggplot(aes(x=total_hours)) + geom_histogram() +
-    labs(x="Number of hours spent counting birds",
-       y="",
-       title="Distribution of birds counted")
-
-```
-
 Interestingly, when the dataset is filtered for the most common birds in they consistantly have the same number of hours dedicate to watching them - part of a research  project perhaps?
  
-```{r hours watched, echo=FALSE}
+```{r}
+# plot of species by common rather than latin names
+common_birds <- bird_counts_processed %>% 
+  group_by(species) %>% 
+  summarise(total_birds=sum(how_many_counted)) %>% 
+  arrange(desc(total_birds)) %>% 
+  top_n(10) 
 
-# need to sort out the title of the plot
+# bootstrap to get confidence intervals
+thresholds <- bird_counts_processed %>% 
+  bootstraps(times=1000) %>% 
+  unnest(map(splits, as.data.frame)) %>% 
+  group_by(species, id) %>% 
+  summarise(mean_hours = mean(total_hours)) %>% 
+  summarise(bootstrap_low = quantile(mean_hours, prob=0.025),
+            bootstrap_high = quantile(mean_hours, prob=0.975))
+
+# join and plot
 bird_counts_processed %>% 
+  group_by(species) %>% 
+  summarise(mean_hours = mean(total_hours)) %>% 
   filter(species %in% t(common_birds[1])) %>% 
-  ggplot(aes(x=year, y=total_hours, color=species)) +
-  geom_jitter() +
-  labs(x="Year",
-       y="Total Hours Watching",
-       title = "The most commonly spotted birds are all watched \n for the same amount of time")
+  left_join(thresholds, by='species') %>% 
+  mutate(species = fct_reorder(as.factor(species), mean_hours)) %>% 
+  ggplot(aes(x=species, y=mean_hours, colour=species)) + 
+  geom_point(show.legend = F) + 
+  geom_errorbar(aes(ymin=bootstrap_low, ymax=bootstrap_high)) +
+  scale_color_discrete(name = "Bird Species") +
+  coord_flip() +
+    labs(x="",
+       y="Hours counting birds",
+       title = "Time spent watching the most common species of birds")
 
+ggsave("species_hours_plot.pdf", plot=last_plot())
 ```
-
+ 
 ## Does the number of hours spent watching birds increase the number of birds counted?
 
 ```{r}
