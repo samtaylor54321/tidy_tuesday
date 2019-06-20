@@ -1,0 +1,159 @@
+---
+title: "Christmas Bird Counts"
+author: "Sam Taylor"
+date: "18/06/2019"
+output: html_document
+---
+
+Every year around Christmas time, since 1921, birdwatchers in the Hamilton area of Ontario have gone out and counted all the birds they see or hear in a day.
+
+They have been carefully recording this data, and the raw data is available through the website of Bird Studies Canada (twitter handle: @BirdsCanada).
+
+Sharleen has been a part of this data collection for the past two years, and decided to do some citizen data science with it! She went through and cleaned this data and made it much more ready for analysis! She detailed her data journey in a 5 part blog series as seen here. Many thanks to her for cleaning, visualizing, and then sharing it!
+
+Data is available at https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-06-18
+
+NB. The focus of this analysis is determing if the hours spent counting birds results in a higher number of birds count. Consequentally, for the purposes of this analysis missing values have been excluded.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+
+# load packages
+library(tidyverse)
+library(rsample)
+
+# set theme
+theme_set(theme_bw())
+
+# load data
+bird_counts <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-06-18/bird_counts.csv")
+
+# remove missing values
+bird_counts_processed <- bird_counts %>% 
+  filter(!is.na(total_hours) & !is.na(how_many_counted))
+```
+
+## How have overall bird numbers and hours spent watching them changed over time?
+
+```{r}
+bird_counts_processed %>% 
+  mutate(decade = 10 * (year %/% 10)) %>% 
+  group_by(decade) %>% 
+  summarise(total_birds = sum(how_many_counted),
+            total_hours = sum(total_hours, na.rm=TRUE)
+            ) %>% 
+  gather(key, value, -decade) %>% 
+  ggplot(aes(x=decade, y=value, color=str_to_sentence(key))) +
+    geom_line() +
+    scale_x_continuous(breaks=seq(1920, 2010, by=10)) +
+    scale_y_continuous(labels=scales::comma_format()) +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.title=element_blank(),
+          legend.position = c(0.2, 0.7)) +
+    labs(x="",
+         y="",
+         title = "The number of birds spotted since the 1960s have increased \n whilst hours spent watching have remained consistant") 
+```
+
+## What are the most common species of birds?
+
+```{r species plot, echo=FALSE}
+
+# plot of species by common rather than latin names
+common_birds <- bird_counts_processed %>% 
+  group_by(species) %>% 
+  summarise(total_birds=sum(how_many_counted)) %>% 
+  arrange(desc(total_birds)) %>% 
+  top_n(10) 
+
+# bootstrap to get confidence intervals
+thresholds <- bird_counts_processed %>% 
+  bootstraps(times=1000) %>% 
+  unnest(map(splits, as.data.frame)) %>% 
+  group_by(species, id) %>% 
+  summarise(mean_count = mean(how_many_counted)) %>% 
+  summarise(bootstrap_low = quantile(mean_count, prob=0.025),
+            bootstrap_high = quantile(mean_count, prob=0.975))
+
+# join and plot
+bird_counts_processed %>% 
+  group_by(species) %>% 
+  summarise(mean_counted = mean(how_many_counted)) %>% 
+  filter(species %in% t(common_birds[1])) %>% 
+  left_join(thresholds, by='species') %>% 
+  mutate(species = fct_reorder(as.factor(species), mean_counted)) %>% 
+  ggplot(aes(x=species, y=mean_counted, colour=species)) + 
+  geom_point(show.legend = F) + 
+  geom_errorbar(aes(ymin=bootstrap_low, ymax=bootstrap_high)) +
+  scale_color_discrete(name = "Bird Species") +
+  coord_flip() +
+    labs(x="",
+       y="Total number of birds counted",
+       title = "Most common species of birds spotted")
+
+ggsave("species_plot.pdf", plot=last_plot())
+  
+```
+ 
+## Hours spent watching birds and their counts.
+
+What is the distribution of the number of hours spent watching birds and the number of birds counted during this period. 
+
+The plot below shows the amounts of birds counted in the dataset - a large number of cases resulted
+in no birds being counted.
+
+```{r, echo=FALSE}
+bird_counts_processed %>% 
+  ggplot(aes(x=log10(how_many_counted))) + geom_histogram() +
+  labs(x="Number of birds count (log10 Scale)",
+       y="",
+       title="Distribution of birds counted")
+```
+
+The plot below shows the amounts of time spent watching birds in the dataset.
+
+```{r total_count hist, echo=FALSE}
+bird_counts_processed %>% 
+  ggplot(aes(x=total_hours)) + geom_histogram() +
+    labs(x="Number of hours spent counting birds",
+       y="",
+       title="Distribution of birds counted")
+
+```
+
+Interestingly, when the dataset is filtered for the most common birds in they consistantly have the same number of hours dedicate to watching them - part of a research  project perhaps?
+ 
+```{r hours watched, echo=FALSE}
+
+# need to sort out the title of the plot
+bird_counts_processed %>% 
+  filter(species %in% t(common_birds[1])) %>% 
+  ggplot(aes(x=year, y=total_hours, color=species)) +
+  geom_jitter() +
+  labs(x="Year",
+       y="Total Hours Watching",
+       title = "The most commonly spotted birds are all watched \n for the same amount of time")
+
+```
+
+## Does the number of hours spent watching birds increase the number of birds counted?
+
+```{r}
+bird_counts_processed %>% 
+  mutate(total_hours=cut(x=total_hours, breaks = seq(0,260, by=10))) %>% 
+  ggplot(aes(x=total_hours,y=log(how_many_counted))) + geom_boxplot(notch=TRUE) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x="Hours spent watching birds",
+       y="Birds counted (Log Scale)",
+       title="Birds counted by hour")
+```
+
+Although total hours appears to be statistically significant, the model itself is a poor fit to the data and is in a high bias regime (plot learning curve which demonstrates this.)
+
+```{r}
+model <- lm(how_many_counted ~ total_hours, data=bird_counts_processed)
+summary(model)
+```
+
