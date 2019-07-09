@@ -7,13 +7,18 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 ```
 
 ```{r}
 # load packages
 library(tidyverse)
 library(broom)
+library(scales)
+
+# set theme
+theme_set(theme_bw())
 
 # load data
 media_franchises <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-02/media_franchises.csv")
