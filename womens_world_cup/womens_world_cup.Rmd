@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # load packages
 library(tidyverse)
+library(mlr)
+library(magrittr)
 
 # set theme
 theme_set(theme_bw())
@@ -21,5 +23,82 @@ theme_set(theme_bw())
 wwc_outcomes <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/wwc_outcomes.csv")
 squads <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/squads.csv")
 codes <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/codes.csv")
+```
+
+```{r}
+# summarise squad data
+squad_data <- squads %>% 
+  mutate(country = ifelse(country =='US', 'United States', country)) %>% 
+  group_by(country) %>% 
+  summarise(min_age = min(age, na.rm = T),
+            highest_age = max(age, na.rm = T),
+            avg_age = mean(age, na.rm = T),
+            median_age = median(age, na.rm = T),
+            min_goals = min(goals, na.rm = T),
+            highest_goals = max(goals, na.rm = T),
+            avg_goals = mean(goals, na.rm = T),
+            median_goals = median(goals, na.rm = T),
+            min_caps = min(caps, na.rm = T),
+            highest_caps = max(caps, na.rm = T),
+            avg_caps = mean(caps, na.rm = T),
+            median_caps = median(caps, na.rm = T)) 
+
+# tidy outcomes  
+mutated_outcomes <- wwc_outcomes %>% 
+  left_join(codes) %>% 
+  mutate(away_team = lead(country),
+         team_num2 = lead(team_num),
+         score_2 = lead(score)) %>% 
+  filter(team_num ==1 & team_num2==2 & year=='2019') %>% 
+  select(year,
+         yearly_game_id,
+         round,
+         home_team = country,
+         home_score = score, 
+         away_score = score_2,
+         away_team,
+         home_win = win_status)
+
+
+```
+
+
+```{r}
+# join together
+wcc_df <- mutated_outcomes %>% 
+  left_join(squad_data, by = c('home_team' = 'country')) %>% 
+  left_join(squad_data, by = c('away_team' = 'country'))
+
+# tidy column names
+main_cols <- wcc_df %>% 
+  select(-ends_with('.x'), -ends_with('.y'))  %>% 
+  colnames()
+
+home_cols <- wcc_df %>% 
+  select(ends_with('.x')) %>% 
+  colnames() %>% str_replace(".x",'_home')
+
+away_cols <- wcc_df %>% 
+  select(ends_with('.y')) %>% 
+  colnames() %>% str_replace(".y",'_away')
+
+colnames(wcc_df) <- c(main_cols, home_cols, away_cols)
+
+# sort outcome variable
+wcc_df %<>% 
+  mutate(home_win = case_when(home_win == 'Won' ~ 1,
+                             home_win =='Lost' ~ 2,
+                             home_win == 'Tie' ~ 3)) %>% 
+  select(-round, -home_team, -away_team)
+
+
+```
+
+
+
+```{r}
+task <- makeClassifTask(data=wcc_df, target ='home_win')
+
+
 ```
 
