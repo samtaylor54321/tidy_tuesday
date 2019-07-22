@@ -1,0 +1,21 @@
+---
+title: "Untitled"
+author: "Sam Taylor"
+date: "22/07/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r cars}
+setwd("/Users/samtaylor/Documents/Git/Tidy_Tuesday/Tidy-Tuesday/R4DS_Slack")
+
+r4ds_members <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-16/r4ds_members.csv")
+
+```
+
+
