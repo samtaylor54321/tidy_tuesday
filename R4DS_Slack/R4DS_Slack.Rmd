@@ -116,11 +116,3 @@ members_processed %>%
 
 ```
 
-
-```{r future_direction}
-
-
-
-
-```
-
