@@ -1,21 +1,126 @@
 ---
-title: "Untitled"
-author: "Sam Taylor"
+title: "Lurkers, lukers everywhere: An Analysis of R4DS Slack Channel"
 date: "22/07/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+In honor of the R4DS Online Learning Community team's recent presentation at useR-2019, here are the stats for the R4DS community from it's founding through the start of July. No user names or user information is included - it is aggregated by date.
+
+More information is available at: https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-07-16 
+
+```{r markdownsetup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 ```
 
-## R Markdown
+```{r setup, echo=FALSE}
+# load packages
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(RcppRoll)
 
-```{r cars}
-setwd("/Users/samtaylor/Documents/Git/Tidy_Tuesday/Tidy-Tuesday/R4DS_Slack")
+# set default ggplot theme
+theme_set(theme_bw())
 
+# read in data
 r4ds_members <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-16/r4ds_members.csv")
 
+# tidying dataset and removing unnecessary values - initial 3 months removed as likely
+# to be random noise
+members_processed <- r4ds_members %>% 
+                      select(-guests, -full_members, -name) %>% 
+                      mutate(date = ymd(date)) %>% 
+                      filter(date >='2018-01-01' & date < '2019-07-01')
 ```
 
+
+```{r total_membership}
+members_processed %>% 
+  ggplot(aes(x=date,y=total_membership)) + 
+    geom_line() +
+    labs(x='',
+         y='Total Membership',
+         title ='Membership of the channel has been increasing since 2018') +
+    scale_x_date(date_breaks = '1 month') +
+    theme(axis.text.x = element_text(angle = 75, hjust=1))
+```
+
+```{r reduced_engagement} 
+
+members_processed %>% 
+  transmute(date,
+            perc_active_weekly = weekly_active_members/total_membership) %>% 
+  gather(key, value, -date) %>% 
+  ggplot() +
+    geom_line(aes(x=date, y=value)) +
+    scale_x_date(date_breaks = '1 month') +
+    theme(axis.text.x = element_text(angle = 75, hjust=1)) +
+    scale_y_continuous(labels=percent_format()) +
+    labs(x='',
+         y='Percentage Engagement',
+         title='In spite of this weekly engagement has been falling')
+```
+
+```{r active_users, message=FALSE, warning=FALSE}
+# There's several days with strange values for daily messages - not sure
+# what the deal is with this?
+members_processed %>% 
+  transmute(date,
+            week = floor_date(date,'week'),
+            previous_day = lead(messages_posted),
+            daily_messages = previous_day - messages_posted,
+            weekly_active_members,
+            total_membership) %>% 
+  filter(daily_messages >=0 & daily_messages <=1000 ) %>% 
+  group_by(week) %>% 
+  transmute(date,
+            messages_per_active_user = sum(daily_messages) / weekly_active_members) %>% 
+  ungroup() %>% 
+  filter(date==week) %>% 
+  select(-week) %>% 
+  gather(key, value, -date) %>% 
+  ggplot(aes(x=date, y=value)) + 
+    geom_line() + 
+    geom_smooth() + 
+    geom_point() +
+    scale_x_date(date_breaks = '1 month') +
+    theme(axis.text.x = element_text(angle = 75, hjust=1)) +
+    labs(x='',
+    y='Messages Posted (Weekly)',
+    title='Even active users are engaging less with the platform')
+  
+```
+
+```{r channel_shift}
+
+members_processed %>% 
+  select(date, contains("percent_of_messages")) %>% 
+  mutate(week = floor_date(date, 'week')) %>% 
+  filter(date == week) %>% 
+  select(-week, `Direct Messages` = percent_of_messages_d_ms,
+         `Private Messages` = percent_of_messages_private_channels,
+         `Public Messages` = percent_of_messages_public_channels)  %>% 
+  gather(key, value, -date) %>% 
+  ggplot(aes(x=date, y=value)) + 
+    geom_col(aes(fill=key), color='black', alpha=3/4) +
+    scale_y_continuous(labels=percent_format()) +
+    scale_x_date(breaks = '1 month') +
+    theme(axis.text.x = element_text(angle=75, hjust=1)) +
+    scale_fill_manual(name='',
+                      values=c('forestgreen','firebrick','dodgerblue')) +
+    labs(x='',
+         y='Percentage of Messages',
+         title = 'Direct messages are now being replaced by messages in public channels')
+
+```
+
+
+```{r future_direction}
+
+
+
+
+```
 
