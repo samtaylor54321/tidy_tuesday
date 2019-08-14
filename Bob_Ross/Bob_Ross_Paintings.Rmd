@@ -1,0 +1,107 @@
+---
+title: "Bob Ross Paintings"
+author: "Sam Taylor"
+date: "14/08/2019"
+output: html_document
+---
+
+```{r markdown_setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## The Joy of Painting with Bob Ross
+
+This week's data is from 538, and can either be read in directly from this repo or from the 538 R package which was recently updated to include more data from 538!
+
+The 538 article can be found here: https://fivethirtyeight.com/features/a-statistical-analysis-of-the-work-of-bob-ross/ 
+
+
+```{r setup}
+# load packages
+library(tidyverse)
+library(janitor)
+library(tidytext)
+library(topicmodels)
+library(wordcloud)
+
+# set theme
+theme_set(theme_bw())
+
+# load data
+bob_ross <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-08-06/bob-ross.csv")
+
+# tidy data
+bob_ross_processed <- bob_ross %>% 
+                        janitor::clean_names() %>% 
+                        mutate(season = str_sub(episode,2,3),
+                               title = str_replace_all(str_to_lower(title),'"', ""))
+```
+
+## What are the most common works of Bob Ross?
+
+By far the most common paintings which Bob produces are of trees. Clouds and mountains also
+feature prominantly in his works. 
+
+```{r common_subjects}
+bob_ross_processed %>% 
+  gather(key, value, -season, -title, -episode) %>% 
+  group_by(key) %>%
+  summarise(total_paintings = sum(value)) %>% 
+  top_n(16) %>% 
+  ggplot(aes(fct_reorder(str_to_title(key),total_paintings), total_paintings,
+             fill=total_paintings)) + 
+    geom_col(show.legend=F, color='black') + 
+    coord_flip() +
+    labs(x='',
+         y='Total Paintings',
+         title = 'Trees are the most common subject of Bob Ross paintings') +
+    scale_fill_gradient2(high='dodgerblue2', midpoint = 134)
+```
+
+## Have the works of Bob Ross been changing over time?
+
+Although some themes are constant in Bob Ross paintings, some have changed over time.
+ 
+```{r themes}
+# transform to long
+bob_ross_long <- bob_ross_processed %>% 
+  select(-title, -episode) %>% 
+  gather(key, value, -season)
+# get top 10 subjects
+top_subjects <- bob_ross_processed %>% 
+  select(-title, -episode,-season) %>% 
+  gather(key, value) %>% 
+  group_by(key) %>%  
+  summarise(season_paintings = sum(value),
+            total_paintings = n(), 
+            perc_total = season_paintings/total_paintings) %>% 
+  top_n(6) %>% 
+  select(key)
+# plot the change over time
+bob_ross_long %>% 
+  filter(key %in% top_subjects$key) %>% 
+  group_by(season, key) %>% 
+  summarise(total_paintings = sum(value)) %>% 
+  ggplot(aes(season, total_paintings, fill=str_to_title(key))) + geom_col(position='fill') +
+  labs(x='Season',
+       y='Proportion of Paintings',
+       fill='Painting Subject',
+       title = 'Clouds have become less prominant a theme in Bob Ross paintings over time') 
+
+```
+ 
+## What are the most titles of Bob's work 
+
+Given the subject matter of the paintings it's not surprising to see common words in the
+title's of the paintings reflect this.
+
+```{r wordcloud}
+bob_ross_processed %>% 
+  select(season, title) %>% 
+  unnest_tokens(word, title) %>% 
+  anti_join(stop_words) %>% 
+  count(word, sort=T) %>%
+  with(wordcloud(word,n, max.words=150)) 
+```
+ 
+ 
