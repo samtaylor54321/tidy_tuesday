@@ -1,0 +1,38 @@
+---
+title: "Wildlife Strikes"
+author: "Sam Taylor"
+date: "23/07/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = TRUE)
+knitr::opts_chunk$set(warning = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+
+theme_set(theme_bw())
+
+wildlife_impacts <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-23/wildlife_impacts.csv")
+
+wildlife_impacts_processed <- wildlife_impacts %>% 
+                                mutate(incident_date=ymd(incident_date))
+```
+
+```{r}
+wildlife_impacts_processed %>% 
+  ggplot(aes(x=incident_date)) + geom_histogram()
+
+wildlife_impacts_processed %>% 
+  mutate(state=fct_lump(state,15)) %>% 
+  count(state, sort=T) %>% 
+  filter(state !='Other' & state !="N/A") %>% 
+  ggplot(aes(fct_reorder(state,n), n)) + geom_col(aes(fill=state), color='black',show.legend=FALSE) + coord_flip() +
+  labs(y='Number of Impacts',
+       x='') 
+```
+

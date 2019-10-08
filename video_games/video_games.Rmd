@@ -1,0 +1,45 @@
+---
+title: "Video Games"
+author: "Sam Taylor"
+date: "31/07/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message =FALSE)
+```
+
+## Video Games
+
+```{r setup_script}
+
+# load packages
+library(tidyverse)
+library(lubridate)
+
+# load data
+video_games <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-30/video_games.csv") 
+
+# preprocessing
+video_games_processed <- video_games %>% 
+                          select(-number) %>% 
+                          mutate(release_date = mdy(str_remove(release_date,',')),
+                                 owners = factor(owners))
+
+View(video_games)
+
+```
+
+
+```{r}
+video_games_processed %>% 
+  ggplot(aes(log2(average_playtime), log2(price))) + geom_point()
+
+
+video_games_processed %>% 
+  arrange(desc(price)) %>% View()
+
+```
+
+

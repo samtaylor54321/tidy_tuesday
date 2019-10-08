@@ -1,0 +1,73 @@
+---
+title: "pizza_reviews"
+author: "Sam Taylor"
+date: "07/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pizza Reviews
+
+This week's data is from Jared Lander and Barstool Sports via Tyler Richards.
+
+Credit for this week's concept goes to Ludmila who did a recent dataviz presentation and gave shoutouts to both #tidytuesday and a pizza dataset!
+
+Check out her DataViz video and slides at her GitHub
+
+Jared's data is from top NY pizza restaurants, with a 6 point likert scale survey on ratings. The Barstool sports dataset has critic, public, and the Barstool Staff's rating as well as pricing, location, and geo-location. There are 22 pizza places that overlap between the two datasets.
+
+If you want to look more at geo-location of pizza places, checkout this one from DataFiniti. This includes 10000 pizza places, their price ranges and geo-locations.
+
+```{r set_up, echo=FALSE, messages=FALSE}
+# Load packages
+library(tidyverse)
+library(ggthemes)
+library(lintr)
+
+# Load data
+pizza_jared <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_jared.csv")
+pizza_barstool <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_barstool.csv")
+pizza_datafiniti <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_datafiniti.csv")
+
+```
+
+## Preprocessing
+
+Data Infiniti appears to have duplicate data and although it initially appears to have 10,000 data points. It only actually has `r pizza_datafiniti %>% n_distinct()`. These will be removed for the purposes of this analysis and only distinct locations will be included.
+
+```{r preprocessing}
+# Remove duplicate values for the dataset
+pizza_df <- pizza_datafiniti %>% 
+  distinct() %>% 
+  select(-country)
+
+```
+
+## EDA
+
+
+```{r}
+# Which states have the most pizza reviews?
+
+pizza_df %>% 
+  count(province, sort=T) %>% 
+  top_n(10) %>% 
+  ggplot(aes(reorder(province,n), n, label=n)) + 
+    geom_col() +
+    geom_text(hjust=-0.25) +
+    labs(x='',
+         y='',
+         title='Which states have the most pizza reviews?') +
+    theme_fivethirtyeight() + coord_flip()
+
+```
+
+
+
+
+
+```
+
