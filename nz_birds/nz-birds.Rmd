@@ -1,0 +1,79 @@
+---
+title: "nz_birds"
+author: "Sam Taylor"
+date: "25/11/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load packages
+library(tidyverse)
+library(ggthemes)
+library(lubridate)
+library(glue)
+
+# Set theme
+theme_set(theme_fivethirtyeight())
+
+# Load in data
+nz_bird <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytues#day/master/data/2019/2019-11-19/nz_bird.csv")
+```
+
+##New Zealand Bird of the Year
+
+This week's data is from the New Zealand Forest and Bird Orginization courtesy of Dragonfly Data Science by way of Nathan Moore.
+
+Full details around voting can be found at the Bird of the Year site https://www.birdoftheyear.org.nz/voting/ 
+
+Full details around voting are below - please note that votes are ranked 1-5 (1 is best, 5 is worst), and the voters do not need to submit all 5 votes.
+
+This year, voting is based on the instant runoff (IRV) voting system, which is similar to the system you might have seen in local elections. When you vote, you can rank up to five of your favourite birds, with #1 indicating your favourite bird, #2 indicating your second favourite bird, and so on. It’s no problem if you want to vote for less than five birds.
+
+How the winner is decided
+
+In the IRV voting system, the first preferences of all the votes cast are tallied in a first round of counting. If no bird has more than half of the votes, new rounds of counting are held until one bird has a majority.
+
+In each of these rounds the bird with the lowest number of votes is eliminated and the next ranked choice of those who voted for that bird are added to the totals of the remaining birds.
+
+This process continues until one bird has a majority of votes and is crowned Bird of the Year.
+
+```{r proprocessing, echo=FALSE}
+# Preprocessing the data to get it into the correct format.
+nz_bird_processed <- nz_bird %>% 
+  mutate(date = ymd(date))
+```
+
+# Popular Birds
+
+The most popular bird was the Yellow-eyed Penguin. This bird was the eventual winner of the award.
+
+```{r most_pop}
+# Identify which birds are most popular
+nz_bird_processed %>% 
+  count(bird_breed, sort=T) %>% 
+  filter(!is.na(bird_breed)) %>% 
+  top_n(10) %>% 
+  ggplot(aes(fct_reorder(as.factor(bird_breed),n), n)) +
+    geom_col() +
+    coord_flip() +
+    ggtitle('Which birds recieved the most votes?')
+```
+
+By contrast, the least popular bird was the South Polar Skua. 
+
+```{r least_pop}
+# Identfy which birds were the least popular
+nz_bird_processed %>% 
+  count(bird_breed) %>%
+  arrange(n) %>% 
+  slice(1:10) %>% 
+  ggplot(aes(fct_reorder(as.factor(bird_breed),-n), n)) +
+    geom_col() +
+    coord_flip() +
+    ggtitle('Which birds recieved the least votes?')
+```
+
