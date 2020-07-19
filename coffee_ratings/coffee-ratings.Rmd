@@ -1,0 +1,66 @@
+---
+title: "coffee-ratings"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(broom)
+library(lubridate)
+library(ggthemes)
+library(tidyverse)
+library(tidymodels)
+
+theme_set(theme_fivethirtyeight())
+
+coffee_ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv') %>% 
+  mutate(origin = fct_lump(country_of_origin, 12),
+         harvest_year = parse_number(harvest_year)) %>% 
+  filter(total_cup_points > 0, 
+         !is.na(country_of_origin),
+         !is.na(harvest_year),
+         harvest_year >= 2009) 
+
+```
+
+Ethiopian coffee is generally considered the best in this dataset.
+
+```{r}
+coffee_ratings %>% 
+  mutate(origin = fct_reorder(origin, total_cup_points)) %>% 
+  ggplot(aes(x=origin, y=total_cup_points)) + geom_boxplot(notch = TRUE) +
+  coord_flip() +
+  labs(title = "Which countries produce the best coffee?") 
+
+```
+
+```{r}
+coffee_ratings %>% 
+  group_by(harvest_year) %>% 
+  summarise(mean_points = mean(total_cup_points),
+            total = n()) %>% 
+  ungroup() %>% 
+  ggplot(aes(harvest_year, mean_points)) + 
+    geom_point(aes(size=total), show.legend=FALSE) + 
+    geom_line() +
+    labs(title = "Has coffee improved over time?",
+         caption = "Size presents number of reviews each year")
+  
+```
+```{r}
+
+x_train <- coffee_ratings %>% 
+  select(total_cup_points, aroma:moisture)
+
+lm <- linear_reg() %>% 
+  set_engine("lm")
+
+lm %>% 
+  fit(total_cup_points ~., data = x_train) %>% 
+  tidy() %>% 
+  filter(term != '(Intercept)') %>% 
+  ggplot(aes(term, estimate)) + geom_col()
+
+```
+
