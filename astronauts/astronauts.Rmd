@@ -1,0 +1,53 @@
+---
+title: "astronauts"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggthemes)
+library(lubridate)
+library(tidyverse)
+
+theme_set(theme_fivethirtyeight())
+
+astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv') 
+
+```
+
+```{r}
+
+by_year <- astronauts %>% 
+  group_by(year_of_mission) %>% 
+  summarise(total_astronauts = n_distinct(number),
+            total_missions = n_distinct(mission_title))  %>% 
+  pivot_longer(-year_of_mission, names_to = "key", values_to = "values")
+
+by_year %>% 
+  ggplot(aes(year_of_mission, values, color = key)) + 
+    geom_line() + 
+    geom_point() +
+    theme(legend.title = element_blank()) +
+    labs(title = "More astronauts have been going into space") 
+
+```
+```{r}
+
+by_sex <- astronauts %>% 
+  group_by(sex, year_of_mission) %>% 
+  summarise(total_astronauts = n_distinct(number), 
+            mission_hours = sum(hours_mission),
+            eva_hours = sum(eva_hrs_mission)) %>% 
+  ungroup() %>% 
+  pivot_longer(cols = c(-sex, -year_of_mission), names_to = "key",
+               values_to = "values")
+
+by_sex %>% 
+  ggplot(aes(year_of_mission, values, color = sex)) + 
+    geom_point() +
+    geom_line() +
+    facet_wrap(.~key, scales = "free_y")
+
+```
+
