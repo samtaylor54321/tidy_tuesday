@@ -1,0 +1,5 @@
+polars
+ipykernel
+seaborn
+pyarrow
+scikit-learn
